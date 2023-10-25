@@ -18,7 +18,7 @@ load noisy_lorenz_data.mat X;
 %get size of X and store it as reference dataset
 [N,d] = size(X); Xref = X;
 
-%use only the part of the data for training
+%use only part of the data for training
 N = floor(N/2); X = X(1:N,:);
 
 %define bandwidth, # of inference steps, Mahalanobis matrix, and observable
@@ -125,7 +125,7 @@ Phi_x = Psi_x*Xi;
 B = pinv(Psi_x)*obs(X(1:N-1,:));
 
 %get Koopman modes, V
-W = W'./diag(W'*Xi); V = W*B;   %alternative: V = Xi\B;
+V = B'*(W./diag(W'*Xi)');
 
 end
 
@@ -144,7 +144,7 @@ obs_ref = obs(Xref(start+1:start+steps,:));
 %perform inference
 D = Lam; obs_inf = zeros(steps,d);
 for step = 1:steps
-    obs_inf(step,:) = real(Phi_x(start,:)*D*V); D = D*Lam;
+    obs_inf(step,:) = real(Phi_x(start,:)*D*V'); D = D*Lam;
 end
 
 end
@@ -199,7 +199,7 @@ disp('getting Mahalanobis matrix...')
 LogLam = log(diag(Lam));
 
 %compute flux
-F = (LogLam(1:efcns).'.*Phi_x(:,1:efcns))*V(1:efcns,:); 
+F = (LogLam(1:efcns).'.*Phi_x(:,1:efcns))*V(:,1:efcns)'; 
 
 %get M and regularize
 M = F'*F; M = sqrtm(M); M = M/norm(M);
