@@ -24,7 +24,7 @@ N = floor(N/2); X = X(1:N,:);
 %define bandwidth, # of inference steps, Mahalanobis matrix, and observable
 s = 0.05;        %bandwidth scaling factor
 steps = 40;      %number of inference steps per iteration
-iters = 4;       %number of iterations
+iters = 2;       %number of iterations
 efcns = 200;       %number of eigenfunctions to keep
 bta = 10^(-5);   %regularization parameter
 M = eye(d);      %initial (square root of) Mahalanobis matrix
