@@ -4,7 +4,7 @@ One of the .mat files contains the underlying data set.
 
 The other .mat files provide the values of Xi, Lam, V, obs_ref, obs_inf, and M after 1 and 2 iterations.
 
-Let's compare: Phi_x*V', Xi*Lam*Xi^(-1), and mean(abs(obs_inf-obs_ref).^2)
+Let's compare: Phi_x * V', Xi * Lam * Xi^(-1), and mean(abs(obs_inf-obs_ref).^2)
 
 The .m files run FkMD on the noisy Lorenz system, using curvature or flux to get M.
 
