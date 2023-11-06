@@ -49,7 +49,7 @@ for iter = 1:iters
     %do kernel DMD
     [Psi_x,Psi_y] = get_kernel_matrices(k,X,N);
     [K,Xi,Lam,W] = get_koopman_eigenvectors(Psi_x,Psi_y,bta,N);
-    [Phi_x,V] = get_koopman_modes(Psi_x,Xi,W,X,obs,N);
+    [Phi_x,V] = get_koopman_modes(Psi_x,Xi,W,X,obs,bta,N);
 
     %perform inference
     [obs_ref,obs_inf] = do_inference(Xref,Phi_x,V,Lam,obs,N,steps,d);
@@ -114,7 +114,7 @@ end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function [Phi_x,V] = get_koopman_modes(Psi_x,Xi,W,X,obs,N)
+function [Phi_x,V] = get_koopman_modes(Psi_x,Xi,W,X,obs,bta,N)
 
 disp('getting koopman modes...')
 
@@ -122,7 +122,7 @@ disp('getting koopman modes...')
 Phi_x = Psi_x*Xi;
 
 %get coordinates of observations
-B = pinv(Psi_x)*obs(X(1:N-1,:));
+B = (Psi_x+bta*eye(N-1))\obs(X(1:N-1,:));
 
 %get Koopman modes, V
 V = B'*(W./diag(W'*Xi)');
