@@ -16,17 +16,17 @@ close all; set_plotting_preferences();
 load noisy_lorenz_data.mat X;
 
 %get size of X and store it as reference dataset
-[N,d] = size(X); Xref = X;
+[~,d] = size(X); Xref = X;
 
 %use only part of the data for training
-N = floor(N/2); X = X(1:N,:);
+N = 10; X = X(1:N,:);
 
 %define bandwidth, # of inference steps, Mahalanobis matrix, and observable
 s = 0.05;        %bandwidth scaling factor
-steps = 40;      %number of inference steps per iteration
-iters = 3;       %number of iterations
-efcns = 100;     %# of Koopman eigenfunctions to keep
-bta = 10^(-5);   %regularization parameter
+steps = 10;      %number of inference steps per iteration
+iters = 2;       %number of iterations
+efcns = 5;      %# of Koopman eigenfunctions to use for Mahalanobis matrix
+bta = 10^(-2);   %regularization parameter
 M = eye(d);      %initial (square root of) Mahalanobis matrix
 obs = @(x) x;    %observable of interest
 
@@ -49,7 +49,7 @@ for iter = 1:iters
     %do kernel DMD
     [Psi_x,Psi_y] = get_kernel_matrices(k,X,N);
     [K,Xi,Lam,W] = get_koopman_eigenvectors(Psi_x,Psi_y,bta,N);
-    [Phi_x,V] = get_koopman_modes(Psi_x,Xi,W,X,obs,bta,N);
+    [Phi_x,V] = get_koopman_modes(Psi_x,Xi,W,X,obs,N);
 
     %perform inference
     [obs_ref,obs_inf] = do_inference(Xref,Phi_x,V,Lam,obs,N,steps,d);
@@ -114,7 +114,7 @@ end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function [Phi_x,V] = get_koopman_modes(Psi_x,Xi,W,X,obs,bta,N)
+function [Phi_x,V] = get_koopman_modes(Psi_x,Xi,W,X,obs,N)
 
 disp('getting koopman modes...')
 
@@ -122,7 +122,7 @@ disp('getting koopman modes...')
 Phi_x = Psi_x*Xi;
 
 %get coordinates of observations
-B = (Psi_x+bta*eye(N-1))\obs(X(1:N-1,:));
+B = pinv(Psi_x)*obs(X(1:N-1,:));
 
 %get Koopman modes, V
 V = B'*(W./diag(W'*Xi)');
