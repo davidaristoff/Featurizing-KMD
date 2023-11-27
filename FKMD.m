@@ -91,10 +91,10 @@ function k = get_kernel_function(X,M,N,h)
 X = X(1:N-1,:);
 
 %update bandwidth
-sig = h*std(pdist(X*M));
+sig = std(pdist(X*M));
 
 %update kernel function
-k = @(Y) exp(-pdist2(Y*M,X*M).^2/sig^2); 
+k = @(Y) exp(-pdist2(Y*M,X*M).^2/(h*sig)^2); 
 
 end
 
