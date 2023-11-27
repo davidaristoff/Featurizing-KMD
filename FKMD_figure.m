@@ -56,7 +56,7 @@ for iter = 1:iters
 
     %perform inference
     [obs_ref,obs_inf] = do_inference(Xref,Phi_x,V,Lam,obs,N,steps,d);
-    corrs(:,iter) = get_corrs(obs_ref,obs_inf,steps,M);
+    corrs(:,iter) = get_corrs(obs_ref,obs_inf,steps);
 
     %get **square root of** mahalanobis matrix
     M = get_mahalanobis_matrix(k,X,Xi,V,Lam,M,N,d,efcns);
@@ -79,6 +79,11 @@ plot(ts,obsinf(:,3,iters),'og',ts,obs_ref(:,3),'-.g');
 xlabel('time'); ylabel('system state');
 title('inference after 3rd iteration');
 legend('inferred','reference');
+
+figure; M2 = M^2; sig = std(pdist(X*M)); imagesc(M2/(h*sig)^2); colorbar;
+title('Mahalanobis matrix'); 
+axes('Position',[.6 .7 .2 .2]); box on;
+imagesc(M2(51:60,51:60)/(h*sig)^2)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%% end simulation %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -103,10 +108,10 @@ function k = get_kernel_function(X,M,N,h)
 X = X(1:N-1,:);
 
 %update bandwidth
-sig = h*std(pdist(X*M));
+sig = std(pdist(X*M));
 
 %update kernel function
-k = @(Y) exp(-pdist2(Y*M,X*M).^2/sig^2);  
+k = @(Y) exp(-pdist2(Y*M,X*M).^2/(h*sig)^2);  
 
 end
 
@@ -186,10 +191,7 @@ end
 
 function corrs = get_corrs(obs_ref,obs_inf,steps)
 
-disp('plotting results...'); 
-
-%open and place figure
-figure('Position', [30 30 1400 1100]);
+disp('getting correlations...'); 
 
 %compute correlations
 [corrs,~] = corrcoef([obs_inf(:,1:3)',obs_ref(:,1:3)']); 
