@@ -16,7 +16,7 @@ close all; set_plotting_preferences();
 load noisy_lorenz_data.mat X;
 
 %do delay embedding of length embed_length
-delay = 3; X = delay_embed(X,delay);
+delay = 2; X = delay_embed(X,delay);
 
 %get size of X and store it as reference dataset
 [N,d] = size(X); Xref = X;
@@ -27,7 +27,7 @@ N = floor(N/2); X = X(1:N,:);
 %define bandwidth, # of inference steps, Mahalanobis matrix, and observable
 s = 0.05;        %bandwidth scaling factor
 steps = 40;      %number of inference steps per iteration
-iters = 3;       %number of iterations
+iters = 2;       %number of iterations
 efcns = 100;     %# of Koopman eigenfunctions to keep
 bta = 10^(-5);   %regularization parameter
 M = eye(d);      %initial (square root of) Mahalanobis matrix
@@ -42,6 +42,9 @@ corrs = zeros(steps,iters);
 
 disp('beginning simulation...')
 tic
+
+%store inference at each iteration
+obsinf = zeros(steps,d,iters);
 
 for iter = 1:iters
     disp(['beginning iteration # ...',num2str(iter)]);
@@ -61,7 +64,35 @@ for iter = 1:iters
     %get mahalanobis matrix
     M = get_mahalanobis_matrix(k,X,Xi,V,Lam,M,N,d,efcns);
 
+    %save inference
+    obsinf(:,:,iter) = obs_inf;
+
 end
+
+%plot inference at first step
+figure; ts = 1:1:steps; subplot(2,1,1); 
+plot(ts,obsinf(:,1,1),'ob',ts,obs_ref(:,1),'-.b'); hold on; 
+plot(ts,obsinf(:,2,1),'sr',ts,obs_ref(:,2),'-.r'); 
+plot(ts,obsinf(:,3,1),'sg',ts,obs_ref(:,3),'-.g');
+xlabel('time'); ylabel('system state')
+title('iteration 1'); 
+legend('inferred 1st coord','reference 1st coord',...
+       'inferred 2st coord','reference 2st coord',...
+       'inferred 3st coord','reference 3st coord');
+
+%plot inference at final step
+subplot(2,1,2); 
+plot(ts,obsinf(:,1,iters),'ob',ts,obs_ref(:,1),'-.b'); hold on; 
+plot(ts,obsinf(:,2,iters),'sr',ts,obs_ref(:,2),'-.r'); 
+plot(ts,obsinf(:,3,iters),'sg',ts,obs_ref(:,3),'-.g');
+xlabel('time'); ylabel('system state');
+title(['iteration ',num2str(iters)]);
+
+%plot Mahalanobis matrix
+figure; imagesc(real(M)); colorbar; 
+title('Mahalanobis matrix');
+axes('Position',[.62 .7 .2 .2]); box on;
+imagesc(real(M(1:d,1:d))); colorbar;
 
 disp('mean correlations by iteration count...')
 mean(corrs)
@@ -69,7 +100,7 @@ mean(corrs)
 toc
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%% end simulation %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%% end simulation %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 function X = delay_embed(data,delay)
@@ -94,7 +125,7 @@ X = X(1:N-1,:);
 h = s*std(pdist(X*M))^2;
 
 %update kernel function
-k = @(Y) exp(-pdist2(Y*M,X*M).^2/(2*h)); 
+k = @(Y) exp(-pdist2(Y*M,X*M).^2/(2*h));  
 
 end
 
@@ -125,7 +156,9 @@ K = (Psi_x+bta*eye(N-1))\Psi_y;
 [Lam,index] = sort(Lam,'descend'); Xi = Xi(:,index); W = W(:,index);
 
 %create diagonal eigenvalue matrix
-Lam = diag(Lam); 
+Lam = diag(Lam);
+
+figure; plot(Lam,'.b')
 
 end
 
@@ -143,6 +176,10 @@ B = (Psi_x+bta*eye(N-1))\obs(X(1:N-1,:));
 
 %get Koopman modes, V
 V = B'*(W./diag(W'*Xi)');
+
+%get Koopman modes by ridge regression
+%Note: In practice, use a built-in, NOT the normal equations!
+%thta = 10^(-8); V = ((Xi'*Xi+thta*eye(N-1))\(Xi'*B))';
 
 end
 
@@ -240,7 +277,7 @@ end
 function set_plotting_preferences()
 
 close all;
-set(groot,'defaultTextInterpreter','latex');
+%set(groot,'defaultTextInterpreter','latex');
 set(groot,'DefaultAxesFontSize',14);
 
 end
