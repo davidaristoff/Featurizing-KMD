@@ -4,8 +4,6 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%%% curvature-based Mahalanobis matrix, via equation (0.9) in the notes %%%
-
 close all; set_plotting_preferences();
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -25,12 +23,12 @@ delay = 2; X = delay_embed(X,delay);
 N = floor(N/2); X = X(1:N,:);
 
 %define bandwidth, # of inference steps, Mahalanobis matrix, and observable
-s = 0.05;        %bandwidth scaling factor
+h = .05;          %bandwidth scaling factor
 steps = 40;      %number of inference steps per iteration
-iters = 2;       %number of iterations
+iters = 3;       %number of iterations
 efcns = 100;     %# of Koopman eigenfunctions to keep
 bta = 10^(-5);   %regularization parameter
-M = eye(d);      %initial (square root of) Mahalanobis matrix
+M = eye(d);      %initial **square root of** Mahalanobis matrix
 obs = @(x) x;    %observable of interest
 
 %initialize matrix of correlations
@@ -41,7 +39,6 @@ corrs = zeros(steps,iters);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 disp('beginning simulation...')
-tic
 
 %store inference at each iteration
 obsinf = zeros(steps,d,iters);
@@ -50,7 +47,7 @@ for iter = 1:iters
     disp(['beginning iteration # ...',num2str(iter)]);
 
     %update kernel function
-    k = get_kernel_function(X,M,N,s);
+    k = get_kernel_function(X,M,N,h);
 
     %do kernel DMD
     [Psi_x,Psi_y] = get_kernel_matrices(k,X,N);
@@ -59,9 +56,9 @@ for iter = 1:iters
 
     %perform inference
     [obs_ref,obs_inf] = do_inference(Xref,Phi_x,V,Lam,obs,N,steps,d);
-    corrs(:,iter) = plot_results(obs_ref,obs_inf,steps,M);
+    corrs(:,iter) = get_corrs(obs_ref,obs_inf,steps,M);
 
-    %get mahalanobis matrix
+    %get **square root of** mahalanobis matrix
     M = get_mahalanobis_matrix(k,X,Xi,V,Lam,M,N,d,efcns);
 
     %save inference
@@ -69,35 +66,19 @@ for iter = 1:iters
 
 end
 
-%plot inference at first step
-figure; ts = 1:1:steps; subplot(2,1,1); 
-plot(ts,obsinf(:,1,1),'ob',ts,obs_ref(:,1),'-.b'); hold on; 
-plot(ts,obsinf(:,2,1),'sr',ts,obs_ref(:,2),'-.r'); 
-plot(ts,obsinf(:,3,1),'sg',ts,obs_ref(:,3),'-.g');
-xlabel('time'); ylabel('system state')
-title('iteration 1'); 
-legend('inferred 1st coord','reference 1st coord',...
-       'inferred 2st coord','reference 2st coord',...
-       'inferred 3st coord','reference 3st coord');
+%plot correlations at first step
+figure; subplot(1,2,1); plot(corrs(end,:)); 
+xlabel('iteration'); ylabel('correlation'); ylim([-1.1 1.1]);
+title('correlation by iteration');
 
 %plot inference at final step
-subplot(2,1,2); 
+subplot(1,2,2); ts = 1:1:steps;
 plot(ts,obsinf(:,1,iters),'ob',ts,obs_ref(:,1),'-.b'); hold on; 
-plot(ts,obsinf(:,2,iters),'sr',ts,obs_ref(:,2),'-.r'); 
-plot(ts,obsinf(:,3,iters),'sg',ts,obs_ref(:,3),'-.g');
+plot(ts,obsinf(:,2,iters),'or',ts,obs_ref(:,2),'-.r'); 
+plot(ts,obsinf(:,3,iters),'og',ts,obs_ref(:,3),'-.g');
 xlabel('time'); ylabel('system state');
-title(['iteration ',num2str(iters)]);
-
-%plot Mahalanobis matrix
-figure; imagesc(real(M)); colorbar; 
-title('Mahalanobis matrix');
-axes('Position',[.62 .7 .2 .2]); box on;
-imagesc(real(M(1:d,1:d))); colorbar;
-
-disp('mean correlations by iteration count...')
-mean(corrs)
-
-toc
+title('inference after 3rd iteration');
+legend('inferred','reference');
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%% end simulation %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -116,16 +97,16 @@ end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function k = get_kernel_function(X,M,N,s)
+function k = get_kernel_function(X,M,N,h)
 
 %trim X
 X = X(1:N-1,:);
 
 %update bandwidth
-h = s*std(pdist(X*M))^2;
+sig = h*std(pdist(X*M));
 
 %update kernel function
-k = @(Y) exp(-pdist2(Y*M,X*M).^2/(2*h));  
+k = @(Y) exp(-pdist2(Y*M,X*M).^2/sig^2);  
 
 end
 
@@ -157,8 +138,6 @@ K = (Psi_x+bta*eye(N-1))\Psi_y;
 
 %create diagonal eigenvalue matrix
 Lam = diag(Lam);
-
-figure; plot(Lam,'.b')
 
 end
 
@@ -205,7 +184,7 @@ end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function corrs = plot_results(obs_ref,obs_inf,steps,M)
+function corrs = get_corrs(obs_ref,obs_inf,steps)
 
 disp('plotting results...'); 
 
@@ -213,33 +192,10 @@ disp('plotting results...');
 figure('Position', [30 30 1400 1100]);
 
 %compute correlations
-[corrs,~] = corrcoef([obs_inf',obs_ref']); 
+[corrs,~] = corrcoef([obs_inf(:,1:3)',obs_ref(:,1:3)']); 
 
 %trim correlations
 corrs = diag(corrs(1:steps,steps+1:2*steps));
-
-%plot correlations
-subplot(2,2,1); 
-plot(corrs); title('inference correlation function');
-xlabel('time step'); ylabel('correlation');
-
-%plot inferences vs reference
-subplot(2,2,2); 
-plot3(obs_ref(:,1),obs_ref(:,2),obs_ref(:,3),'ob');
-hold on; plot3(obs_inf(:,1),obs_inf(:,2),obs_inf(:,3),'xr'); 
-legend('reference','inferred','interpreter','latex');
-title('trajectory inference');
-
-%plot (square root of) mahalanobis matrix
-subplot(2,2,3);
-imagesc(real(M)); title('Mahalanobis matrix (real part)');
-
-%plot (square root of) mahalanobis matrix
-subplot(2,2,4);
-imagesc(imag(M)); title('Mahalanobis matrix (complex part)');
-
-%pause briefly
-%pause(0.1);
 
 end
 
@@ -267,8 +223,8 @@ for n=1:N-1
     J = jacobian(X(n,:)); M = M + J*J';
 end
 
-%get square root
-M = sqrtm(real(M));
+%get square root M and normalize
+M = real(sqrtm(real(M))); M = M/norm(M);
 
 end
 

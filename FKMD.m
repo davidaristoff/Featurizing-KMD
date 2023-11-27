@@ -25,7 +25,7 @@ delay = 3; X = delay_embed(X,delay);
 N = floor(N/2); X = X(1:N,:);
 
 %define bandwidth, # of inference steps, Mahalanobis matrix, and observable
-s = 0.05;        %bandwidth scaling factor
+h = 0.05;        %bandwidth scaling factor
 steps = 40;      %number of inference steps per iteration
 iters = 3;       %number of iterations
 efcns = 100;     %# of Koopman eigenfunctions to keep
@@ -47,7 +47,7 @@ for iter = 1:iters
     disp(['beginning iteration # ...',num2str(iter)]);
 
     %update kernel function
-    k = get_kernel_function(X,M,N,s);
+    k = get_kernel_function(X,M,N,h);
 
     %do kernel DMD
     [Psi_x,Psi_y] = get_kernel_matrices(k,X,N);
@@ -85,16 +85,16 @@ end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function k = get_kernel_function(X,M,N,s)
+function k = get_kernel_function(X,M,N,h)
 
 %trim X
 X = X(1:N-1,:);
 
 %update bandwidth
-h = s*std(pdist(X*M))^2;
+sig = h*std(pdist(X*M));
 
 %update kernel function
-k = @(Y) exp(-pdist2(Y*M,X*M).^2/(2*h)); 
+k = @(Y) exp(-pdist2(Y*M,X*M).^2/sig^2); 
 
 end
 
@@ -230,8 +230,8 @@ for n=1:N-1
     J = jacobian(X(n,:)); M = M + J*J';
 end
 
-%get square root
-M = sqrtm(real(M));
+%get square root and normalize
+M = real(sqrtm(real(M))); M = M/norm(M);
 
 end
 
