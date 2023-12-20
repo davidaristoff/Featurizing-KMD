@@ -9,7 +9,6 @@ dt = 0.05;
 iterset = [1 2 5];
 
 %set plotting preferences
-%close all;
 set(groot,'defaultTextInterpreter','latex');
 set(groot,'DefaultAxesFontSize',20);
 
