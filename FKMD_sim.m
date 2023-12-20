@@ -54,7 +54,7 @@ for iter = 1:iters
     %update kernel function
     [z,dz] = get_fourier_features(X,M,R,N,d,h,samples);
 
-    %do kernel DMD
+    %do Koopman eigendecomposition
     [Psi_x,Psi_y] = get_feature_matrices(z,X,Y);
     [K,Xi,Lam,W] = get_koopman_eigenvectors(Psi_x,Psi_y,bta,R);
     [Phi_x,V] = get_koopman_modes(Psi_x,Xi,W,X,bta,R);
