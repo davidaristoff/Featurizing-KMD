@@ -51,7 +51,7 @@ tic
 for iter = 1:iters
     disp(['beginning iteration # ...',num2str(iter)]);
 
-    %update kernel function
+    %update features
     [z,dz] = get_fourier_features(X,M,R,N,d,h,samples);
 
     %do Koopman eigendecomposition
