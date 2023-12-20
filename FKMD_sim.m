@@ -61,7 +61,7 @@ for iter = 1:iters
 
     %perform inference
     [obs_ref,obs_inf] = ...
-        do_inference(ref,Phi_x,V,Lam,steps,N,d,noise,delay);
+        do_inference(ref,Phi_x,V,Lam,steps,N,R,d,noise,delay);
 
     %get mahalanobis matrix
     M = get_mahalanobis_matrix(dz,X,Xi,V,Lam,N,d,efcns,samples);
@@ -181,15 +181,15 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 function [obs_ref,obs_inf] = ...
-    do_inference(ref,Phi_x,V,Lam,steps,N,d,noise,delay)
+    do_inference(ref,Phi_x,V,Lam,steps,N,R,d,noise,delay)
 
 disp('doing inference...')
 
 %choose starting sample and compute reference time series
-obs_ref = ref(delay+N:delay+N+steps-1,:);
+obs_ref = ref(delay+N-1:delay+N+steps-2,:);
 
 %perform inference
-D = Lam; obs_inf = zeros(steps,noise+1);
+D = eye(R); obs_inf = zeros(steps,noise+1);
 for step = 1:steps
     o = real(Phi_x(N,:)*D*V'); obs_inf(step,:) = o(d-noise:d); D = D*Lam;
 end
