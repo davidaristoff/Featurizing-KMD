@@ -10,7 +10,7 @@ A description of the experiment can be found at https://arxiv.org/abs/2312.09146
 
 Note:
 
-To reproduce the FKMD data in Figs. 1-2, use N=10^5, R=7500, delay=100, noise=1, iters=8.
+To reproduce the FKMD data in Figs. 1-2, use N=10^5, R=7500, delay=100, noise=1, iters=5.
 
-To reproduce the KMD data in Fig. 1, use N=10^5+100, R=7500, delay=1, noise=0, iters=1.
+To reproduce the KMD data in Fig. 1, use N=10^5+99, R=7500, delay=1, noise=0, iters=1.
 
