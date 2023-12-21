@@ -173,7 +173,7 @@ Phi_x = Psi_x*Xi;
 %get coordinates of observations
 B = (Psi_x'*Psi_x+bta*eye(R))\(Psi_x'*X);
 
-%get Koopman modes, V
+%get Koopman modes
 V = B'*(W./diag(W'*Xi)');
 
 end
