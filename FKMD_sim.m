@@ -20,7 +20,7 @@ iters = input('number of iterations? ');
 %set additional parameters as constant
 h = 1;            %bandwidth scaling factor
 sig = 1;          %Gaussian noise parameter
-steps = 200;      %number of inference steps per iteration
+steps = 100;      %number of inference steps per iteration
 efcns = 20;       %# of Koopman eigenfunctions to keep
 bta = 10^(-5);    %regularization parameter
 samples = 5000;   %number of subsamples for getting bandwidth & M matrix
@@ -35,8 +35,8 @@ load lorenz96_data.mat ref;
 %add noise and mean center data
 ref = add_noise(ref,noise,sig);
 
-%perform l embedding
-[X,Y,d] = l_embed(ref,N,noise,l);
+%perform time embedding and generate validation data
+[X,Y,d,obs_ref] = delay_embed(ref,steps,N,noise,l);
 
 %initialize Mahalanobis matrix
 M = eye(d); 
@@ -57,11 +57,10 @@ for iter = 1:iters
     %do Koopman eigendecomposition
     [Psi_x,Psi_y] = get_feature_matrices(psi,X,Y);
     [K,Xi,Mu,W] = get_koopman_eigenvectors(Psi_x,Psi_y,bta,R);
-    [Phi_x,V] = get_koopman_modes(Psi_x,Xi,W,X,bta,R);
+    [Phi_x,V] = get_koopman_modes(Psi_x,Xi,W,Y,bta,R);
 
     %perform inference
-    [obs_ref,obs_inf] = ...
-        do_inference(ref,Phi_x,V,Mu,steps,N,R,d,noise,l);
+    obs_inf = do_inference(Phi_x,V,Mu,steps,N,R,d,noise);
 
     %get mahalanobis matrix
     M = get_mahalanobis_matrix(dpsi,X,Xi,V,Mu,N,d,efcns,samples);
@@ -71,8 +70,9 @@ for iter = 1:iters
         '_R',num2str(R), ...
         '_l',num2str(l), ...
         '_noise',num2str(noise), ...
-        '_iter',num2str(iter)], ...
-        "obs_inf","obs_ref","M","N","R","l","noise","steps","d");
+        '_iter',num2str(iter), ...
+        '_steps',num2str(steps)], ...
+        "obs_inf","obs_ref","Mu","M","N","R","l","noise","steps","d");
 
 end
 
@@ -94,19 +94,22 @@ end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function [X,Y,d] = l_embed(ref,N,noise,l)
+function [X,Y,d,obs_ref] = delay_embed(ref,steps,N,noise,l)
 
 disp('performing time embedding...')
 
 %determine dimension of model
 d = l*(noise+1);
 
-%compute data matrices
+%pull training data
 X = zeros(N,d); Y = zeros(N,d);
 for n=1:N
-    X(n,:) = reshape(ref(n:l+n-1,:)',[1 d]); 
-    Y(n,:) = reshape(ref(n+1:l+n,:)',[1 d]);
+    X(n,:) = reshape(ref(n:n+l-1,:)',[1 d]); 
+    Y(n,:) = reshape(ref(n+1:n+l,:)',[1 d]);
 end
+
+%pull validation data
+obs_ref = ref(N+l:N+l+steps-1,:);
 
 end
 
@@ -156,14 +159,11 @@ K = (Psi_x'*Psi_x+bta*eye(R))\(Psi_x'*Psi_y);
 %sort eigenvectors
 [Mu,index] = sort(Mu,'descend'); Xi = Xi(:,index); W = W(:,index);
 
-%create diagonal eigenvalue matrix
-Mu = diag(Mu); 
-
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function [Phi_x,V] = get_koopman_modes(Psi_x,Xi,W,X,bta,R)
+function [Phi_x,V] = get_koopman_modes(Psi_x,Xi,W,Y,bta,R)
 
 disp('getting koopman modes...')
 
@@ -171,7 +171,7 @@ disp('getting koopman modes...')
 Phi_x = Psi_x*Xi;
 
 %get coordinates of observations
-B = (Psi_x'*Psi_x+bta*eye(R))\(Psi_x'*X);
+B = (Psi_x'*Psi_x+bta*eye(R))\(Psi_x'*Y);
 
 %get Koopman modes
 V = B'*(W./diag(W'*Xi)');
@@ -180,18 +180,25 @@ end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function [obs_ref,obs_inf] = ...
-    do_inference(ref,Phi_x,V,Mu,steps,N,R,d,noise,l)
+function obs_inf = do_inference(Phi_x,V,Mu,steps,N,R,d,noise)
 
 disp('doing inference...')
 
-%choose starting sample and compute reference time series
-obs_ref = ref(l+N-1:l+N+steps-2,:);
+%initialize eigenvalues and inferred observations
+D = ones(R,1); obs_inf = zeros(steps,noise+1);
 
 %perform inference
-D = eye(R); obs_inf = zeros(steps,noise+1);
-for step = 1:steps
-    o = real(Phi_x(N,:)*D*V'); obs_inf(step,:) = o(d-noise:d); D = D*Mu;
+for t = 1:steps
+
+    %do Koopman inference
+    o = real(Phi_x(N,:)*(D.*V')); 
+    
+    %pull last part of time embedding
+    obs_inf(t,:) = real(o(d-noise:d));
+
+    %update eigenvalues
+    D = D.*Mu;
+
 end
 
 end
@@ -202,22 +209,27 @@ function M = get_mahalanobis_matrix(dpsi,X,Xi,V,Mu,N,d,efcns,samples)
 
 disp('getting Mahalanobis matrix...')
 
-%convert eigenvalue matrix to vector and compute log
-Lam = log(diag(Mu)).';
-
 %trim Koopman eigenfunctions and Koopman modes
-Lam = Lam(1:efcns); Xi = Xi(:,1:efcns); V = V(:,1:efcns);
+Mu = Mu(1:efcns); Xi = Xi(:,1:efcns); V = V(:,1:efcns);
 
 %define Jacobian function
-XiLamV = (Xi.*Lam)*V'; jacobian = @(x) dpsi(x)*XiLamV;
+XiLamV = Xi*(log(Mu).*V'); jacobian = @(x) dpsi(x)*XiLamV;
 
-%compute M as the outerproduct of curvature at subsamples
+%initialize M and choose subsamples
 M = zeros(d,d); ind = randi(N,[samples 1]);
-for i=1:samples
-    J = jacobian(X(ind(i),:)); M = M + J*J';
+
+%compute mahalanobis matrix M
+for n=1:samples
+
+    %compute curvature
+    J = jacobian(X(ind(n),:)); 
+    
+    %update gradient outerproduct
+    M = M + J*J';
+
 end
 
-%get square root and normalize
+%get square root of M (with optional normalization) 
 M = real(sqrtm(real(M))); M = M/norm(M);
 
 end

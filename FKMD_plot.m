@@ -1,5 +1,5 @@
 %define parameters (from FKMD simulation)
-dt = 0.05; iterset = [1 2 8];
+dt = 0.05; iterset = [1 2 6];
 
 %set plotting preferences
 set(groot,'defaultTextInterpreter','latex');
@@ -14,8 +14,9 @@ iter = iterset(i);
         '_R',num2str(R), ...
         '_l',num2str(l), ...
         '_noise',num2str(noise), ...
-        '_iter',num2str(iter)], ...
-        "obs_inf","obs_ref","M");
+        '_iter',num2str(iter), ...
+        '_steps',num2str(steps)], ...
+        "obs_inf","obs_ref","M","d");
 
 %plot inferences vs reference
 figure('Position', [30 30 400 300]);
@@ -33,13 +34,12 @@ ind_o = logical(repmat([1,zeros(1,noise)],1,d/(noise+1)));
 ind_n = logical(1-ind_o);
 
 %plot observation and nuisance mahalanobis matrices
-figure('Position', [30 30 800 300]); M2 = M(ind_o,ind_o);
-subplot(1,2,1); imagesc(M2); colorbar; 
+figure('Position', [30 30 800 300]); 
+subplot(1,2,1); imagesc(M(ind_o,ind_o)); colorbar; 
 title(['non-nuisance \mbox{\boldmath $M$} after iteration ' ...
     ,num2str(iter)]);
-axes('Position',[.085 .185 .25 .25])
-box on
-imagesc(M2(end-14:end,end-14:end)); axis square;
+axes('Position',[.085 .185 .25 .25]); box on;
+M2 = M(ind_o,ind_o); imagesc(M2(end-14:end,end-14:end)); axis square;
 subplot(1,2,2); imagesc(M(ind_n,ind_n)); colorbar; 
 clim([min(M(ind_o,ind_o),[],'all') max(M(ind_o,ind_o),[],'all')]);
 title(['nuisance \mbox{\boldmath $M$} after iteration ',num2str(iter)]);
