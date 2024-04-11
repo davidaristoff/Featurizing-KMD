@@ -20,10 +20,10 @@ iters = input('number of iterations? ');
 %set additional parameters as constant
 h = 1;            %bandwidth scaling factor
 sig = 1;          %Gaussian noise parameter
-steps = 100;      %number of inference steps per iteration
+steps = 1000;     %number of inference steps per iteration
+samples = 5000;   %# of samples for computing Mahalanobis matrix
 efcns = 20;       %# of Koopman eigenfunctions to keep
 bta = 10^(-5);    %regularization parameter
-samples = 5000;   %number of subsamples for getting bandwidth & M matrix
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%% initialize simulation %%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -52,7 +52,7 @@ for iter = 1:iters
     disp(['beginning iteration # ...',num2str(iter)]);
 
     %update features
-    [psi,dpsi] = get_fourier_features(X,M,R,N,d,h,samples);
+    [psi,dpsi] = get_fourier_features(X,M,R,d,h);
 
     %do Koopman eigendecomposition
     [Psi_x,Psi_y] = get_feature_matrices(psi,X,Y);
@@ -115,12 +115,12 @@ end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function [psi,dpsi] = get_fourier_features(X,M,R,N,d,h,samples)
+function [psi,dpsi] = get_fourier_features(X,M,R,d,h)
 
 disp('getting Fourier features...')
 
-%update bandwidth by sampling pairwise standard deviations
-ind = randi(N,[samples 1]); sig = std(pdist(X(ind,:)*M)); 
+%update bandwidth
+sig = sqrt(sum(var(X)));
 
 %get fourier features coefficients
 w = normrnd(0,1,[d R]); M = M/(h*sig);
@@ -194,7 +194,7 @@ for t = 1:steps
     o = real(Phi_x(N,:)*(D.*V')); 
     
     %pull last part of time embedding
-    obs_inf(t,:) = real(o(d-noise:d));
+    obs_inf(t,:) = o(d-noise:d);
 
     %update eigenvalues
     D = D.*Mu;
@@ -213,7 +213,7 @@ disp('getting Mahalanobis matrix...')
 Mu = Mu(1:efcns); Xi = Xi(:,1:efcns); V = V(:,1:efcns);
 
 %define Jacobian function
-XiLamV = Xi*(log(Mu).*V'); jacobian = @(x) dpsi(x)*XiLamV;
+XiLamV = Xi*(Mu.*V'); jacobian = @(x) dpsi(x)*XiLamV;
 
 %initialize M and choose subsamples
 M = zeros(d,d); ind = randi(N,[samples 1]);
