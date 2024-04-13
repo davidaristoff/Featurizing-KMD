@@ -1,5 +1,5 @@
 %define parameters (from FKMD simulation)
-dt = 0.05; iterset = [1 2 6];
+dt = 0.05; iterset = [1 2 5];
 
 %set plotting preferences
 set(groot,'defaultTextInterpreter','latex');
@@ -14,6 +14,7 @@ iter = iterset(i);
         '_R',num2str(R), ...
         '_l',num2str(l), ...
         '_noise',num2str(noise), ...
+        '_h',num2str(h), ...
         '_iter',num2str(iter), ...
         '_steps',num2str(steps)], ...
         "obs_inf","obs_ref","M","d");
@@ -36,13 +37,13 @@ ind_n = logical(1-ind_o);
 %plot observation and nuisance mahalanobis matrices
 figure('Position', [30 30 800 300]); 
 subplot(1,2,1); imagesc(M(ind_o,ind_o)); colorbar; 
-title(['non-nuisance \mbox{\boldmath $M$} after iteration ' ...
+title(['non-nuisance \mbox{{\boldmath $M$}$^{1/2}$} after iteration ' ...
     ,num2str(iter)]);
 axes('Position',[.085 .185 .25 .25]); box on;
 M2 = M(ind_o,ind_o); imagesc(M2(end-14:end,end-14:end)); axis square;
 subplot(1,2,2); imagesc(M(ind_n,ind_n)); colorbar; 
 clim([min(M(ind_o,ind_o),[],'all') max(M(ind_o,ind_o),[],'all')]);
-title(['nuisance \mbox{\boldmath $M$} after iteration ',num2str(iter)]);
+title(['nuisance \mbox{{\boldmath $M$}$^{1/2}$} after iteration ',num2str(iter)]);
 saveas(gcf,['mahalanobis_iter_',num2str(iter)],'epsc');
 
 end
