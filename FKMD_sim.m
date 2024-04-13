@@ -15,12 +15,12 @@ N = input('number of samples? ');
 R = input('number of features? ');
 l = input('time delay length? ');
 noise = input('number of noise coordinates? ');
+h = input('bandwidth? ');
 iters = input('number of iterations? ');
 
 %set additional parameters as constant
-h = 1;            %bandwidth scaling factor
 sig = 1;          %Gaussian noise parameter
-steps = 1000;     %number of inference steps per iteration
+steps = 200;      %number of inference steps per iteration
 samples = 5000;   %# of samples for computing Mahalanobis matrix
 efcns = 20;       %# of Koopman eigenfunctions to keep
 bta = 10^(-5);    %regularization parameter
@@ -52,7 +52,7 @@ for iter = 1:iters
     disp(['beginning iteration # ...',num2str(iter)]);
 
     %update features
-    [psi,dpsi] = get_fourier_features(X,M,R,d,h);
+    [psi,dpsi] = get_fourier_features(X,M,R,d,h,N,samples);
 
     %do Koopman eigendecomposition
     [Psi_x,Psi_y] = get_feature_matrices(psi,X,Y);
@@ -70,9 +70,10 @@ for iter = 1:iters
         '_R',num2str(R), ...
         '_l',num2str(l), ...
         '_noise',num2str(noise), ...
+        '_h',num2str(h), ...
         '_iter',num2str(iter), ...
         '_steps',num2str(steps)], ...
-        "obs_inf","obs_ref","Mu","M","N","R","l","noise","steps","d");
+        "obs_inf","obs_ref","Mu","M","N","R","l","noise","h","steps","d");
 
 end
 
@@ -115,12 +116,12 @@ end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function [psi,dpsi] = get_fourier_features(X,M,R,d,h)
+function [psi,dpsi] = get_fourier_features(X,M,R,d,h,N,samples)
 
 disp('getting Fourier features...')
 
-%update bandwidth
-sig = sqrt(sum(var(X)));
+%get bandwidth
+ind = randsample(N,samples,'true'); sig = median(pdist(X(ind,:)*M));
 
 %get fourier features coefficients
 w = normrnd(0,1,[d R]); M = M/(h*sig);
