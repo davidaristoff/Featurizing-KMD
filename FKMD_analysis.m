@@ -56,10 +56,6 @@ iter = iterset(i);
 
 end
 
-%% load ordinary KMD simulation results
-
-load KMD.mat obs_inf obs_ref
-
 %% begin plotting
 
 %plot initial and final predictions
