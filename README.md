@@ -1,4 +1,4 @@
-This repository runs the Lorenz96 experiment described in "Featuring Koopman mode decomposition, with applications to cancer cell signaling" by D. Aristoff, J. Copperman, N. Mankovich, and A. Davies. 
+This repository runs the Lorenz96 experiment described in "Featurizing Koopman mode decomposition for Robust Forecasting" by D. Aristoff, J. Copperman, N. Mankovich, and A. Davies. 
 
 A description of the experiment can be found at https://arxiv.org/abs/2312.09146v2.
 
