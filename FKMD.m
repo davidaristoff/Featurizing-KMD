@@ -11,8 +11,8 @@ sig = 3;         %noise parameter
 noise = 1;       %number of noise coordinates
 
 %set main FKMD parameters
-N = 1e5;         %number of samples
-R = 1e3;         %number of features
+N = 1e6;         %number of samples
+R = 5e3;         %number of features
 iters = 5;       %number of iterations
 l = 100;         %time delay length
 h = 1;           %bandwidth
