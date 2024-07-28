@@ -23,8 +23,8 @@ bta = 1e-5;      %regularization parameter
 %%%%%%%%%%%%%%%%%%%%%%%%%% initialize simulation %%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%load reference data
-load oscillator_data.mat X Y; 
+%load input and output data (X = input data matrix, Y = output data matrix)
+load system_data.mat X Y; 
 
 %get data dimensions (N = number of samples, d = dimension of samples)
 [N,d] = size(X);
@@ -33,9 +33,10 @@ load oscillator_data.mat X Y;
 %X = input data matrix, an array of size Nxd
 %Y = output data matrix, an array of size Nxd
 
-%X and Y are simply input/output data pairs. They do not have to be
-%delay embedded. If they are not, d is simply the system's dimension. 
-%With time embedding, d = (system's dimension)x(l = embedding length).
+%X and Y are simply input/output data pairs. Y(n,:) is the system
+%state at lag tau, given that it started at X(n,:). System states need 
+%not be delay embedded. If they are not, d is just the system's dimension. 
+%With delay embedding, d = (system's dimension)x(l = embedding length).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%% begin simulation %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -181,13 +182,13 @@ XiLamV = Xi*((Mu-1).*V'); jacobian = @(x) dpsi(x)*XiLamV;
 %initialize M and choose subsamples
 M = zeros(d,d); ind = randi(N,[samples 1]);
 
-%compute mahalanobis matrix M
+%compute M
 for n=1:samples
 
-    %compute curvature
+    %compute J
     J = jacobian(X(ind(n),:)); 
     
-    %update gradient outerproduct
+    %update M
     M = M + J*J';
 
 end
