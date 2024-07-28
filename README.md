@@ -4,7 +4,7 @@ A description of the experiment can be found at https://arxiv.org/abs/2312.09146
 
 "lorenz96_sim.m" generates the data file lorenz96_data.mat.
 
-"FKMD.m" runs FKMD on the Lorenz96 data. This generates a data file for each iteration.
+"FKMD_lorenz96.m" runs FKMD on the Lorenz96 data. This generates a data file for each iteration.
 
 "FKMD_analysis.m" analyzes these data files to create the plots that appear in the Lorenz experiment.
 
