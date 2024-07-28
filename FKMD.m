@@ -10,14 +10,14 @@
 
 %choose basic parameters for FKMD simulation
 R = 1e3;          %number of features
-h = 1;            %bandwidth scaling factor
+h = 1;            %scaling factor applied to bandwidth
 efcns = 5e2;      %number of eigenfunctions (defines mode set S)
 iters = 3;        %number of iterations
 
 %choose other parameters for inference
-steps = 1e3;     %number of inference steps per iteration
+steps = 1e3;     %number of inference time steps
 samples = 5e3;   %number of subsamples for getting M matrix
-bta = 1e-5;      %regularization parameter
+bta = 1e-5;      %ridge regression regularization parameter
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%% initialize simulation %%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -86,8 +86,8 @@ function [psi,dpsi] = get_fourier_features(X,M,R,d,h)
 
 disp('getting Fourier features...')
 
-%update bandwidth by sampling pairwise standard deviations
-sig = sqrt(sum(var(X)));
+%update bandwidth using a version of Silverman's rule of thumb
+sig = sqrt(sum(var(X*M)));
 
 %get fourier features coefficients
 w = normrnd(0,1,[d R]); M = M/(h*sig);
